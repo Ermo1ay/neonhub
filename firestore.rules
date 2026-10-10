@@ -1,0 +1,24 @@
+rules_version = '2';
+service cloud.firestore {
+ match /databases/{database}/documents {
+  function signedIn(){return request.auth != null;}
+  function owner(){return signedIn() && request.auth.token.email == "ВСТАВЬ_СВОЮ_ПОЧТУ";}
+  match /profiles/{uid}{
+   allow read: if signedIn() && request.auth.uid == uid || owner();
+   allow create: if signedIn() && request.auth.uid == uid && request.resource.data.email == request.auth.token.email;
+   allow update: if signedIn() && request.auth.uid == uid && request.resource.data.email == resource.data.email;
+   allow delete: if owner();
+  }
+  match /posts/{postId}{
+   allow read: if true;
+   allow create: if signedIn() && request.resource.data.uid == request.auth.uid && request.resource.data.email == request.auth.token.email && request.resource.data.text is string && request.resource.data.text.size() > 0 && request.resource.data.text.size() <= 1500;
+   allow update: if signedIn() && resource.data.uid == request.auth.uid && request.resource.data.uid == resource.data.uid && request.resource.data.text is string && request.resource.data.text.size() <= 1500;
+   allow delete: if owner() || (signedIn() && resource.data.uid == request.auth.uid);
+  }
+  match /reports/{reportId}{
+   allow create: if signedIn() && request.resource.data.reporterUid == request.auth.uid && request.resource.data.reason is string && request.resource.data.reason.size() <= 1000;
+   allow read, update, delete: if owner();
+  }
+  match /{document=**}{allow read, write: if false;}
+ }
+}
